@@ -39,7 +39,7 @@ This use case have two states:
     * run the scream receiver on host.
     * [more info][archwiki scream]
 * Audio using 5.1 [usb-audio][archwiki usb-audio]
-* You can use the [MSI utility v2][git msi] to ensure [MSI][msi] for virtualized devices are working, checking if IRQs are negative.
+* You can use the [MSI utility v3][app msi] to ensure [MSI][msi] for virtualized devices are working, checking if IRQs are negative.
 * On this example, the VM have 2 disks, one as LVM's LV and another as raw image for demonstrative purposes. Usage of LVM allow us to snapshot, even with *raw* format, and is prefered.
 
 
@@ -96,7 +96,7 @@ When you need to change xorg configuration files between "no pci passthrough" an
 
 [git barrier]: https://github.com/debauchee/barrier/
 [git scream]: https://github.com/duncanthrax/scream/
-[git msi]: https://github.com/CHEF-KOCH/MSI-utility/
+[app msi]: https://forums.guru3d.com/threads/windows-line-based-vs-message-signaled-based-interrupts-msi-tool.378044/
 [msi]: https://vfio.blogspot.com/2014/09/vfio-interrupts-and-how-to-coax-windows.html
 [git scream ivshmem]: https://github.com/duncanthrax/scream/#using-ivshmem-between-windows-guest-and-linux-host
 [archwiki]: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF
