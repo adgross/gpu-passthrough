@@ -9,8 +9,8 @@ Based on [ArchWiki][archwiki] how-to for gpu passthrough.
 Possibility to activate the gpu passthrough when needed. You may want to use the primary GPU for the host or don't need the guest running all the time, like when you don't need the gpu passthrough to play some _Windows-only_  game.
 
 This use case have two states:  
-1) no guest running &rarr; host show up in monitors connect to all gpus;  
-2) guest running &rarr; host show in secondary monitors and the guest on the primary monitors.
+1) no guest running &rarr; host use the monitors connect to all gpus;  
+2) guest running &rarr; host use the secondary monitors and the guest use the primary monitors.
 
 
 ## Tested Hardware
@@ -20,23 +20,25 @@ This use case have two states:
 * **Motherboard**: **ASUS CROSSHAIR V FORMULA-Z** (BIOS version: 2201)
 * RAM: 32GB
 * Monitors: at least 2
-    * 1 for host
-    * 1 for guest
-* The *boot cmdline* I use for this specific machine and configuration:
-> _BOOT_IMAGE=/vmlinuz-linux root=/dev/mapper/main-root rw loglevel=3 quiet_ amd_iommu=on iommu=pt default_hugepagesz=1G hugepagesz=1G hugepages=12
+    * 1 for host, connected to AMD HD 5450 
+    * 1 for guest, connected to NVIDIA GTX 1080
+* The *boot cmdline* used for this machine and configuration:
+> _BOOT_IMAGE=/vmlinuz-linux root=/dev/mapper/main-root rw loglevel=3 quiet apparmor=1 lsm=lockdown,yama,apparmor,bpf_ amd_iommu=on iommu=pt default_hugepagesz=1G hugepagesz=1G hugepages=12
 
 ## Improve general usage
 * If you have a ton of RAM and don't need it _always_ on the host, use [Static Huge Pages][archwiki static huge pages] for better performance.
-* NVIDIA specific changes for [error 43][archwiki error43]. NVIDIA don't like the driver to run inside VMs.
+* If your VM still using a NVIDIA driver prior to version 465, need changes to fix [error 43][archwiki error43].
 * Control mouse and keyboard with [evdev][archwiki evdev].
     * The mouse/keyboard swap between host and guest is simple as *LCtrl + RCtrl*.
 * Control mouse and keyboard using [Barrier][git barrier].
-    * with this method it is recommended to have a NAT interface or some _fast_ host<->guest network.
+    * with this method it is recommended to have a virtio interface (NAT or isolated network), some _fast_ host<->guest network.
     * you can configure hotkeys to execute on host when pressed inside the guest, for example, push-to-talk applications running on host while playing a game on guest.
-* Virtual Sound Card - [scream][git scream].
+* Audio using Virtual Sound Card - [scream][git scream].
     * configure one [IVSHMEN][git scream ivshmem].
     * install the driver on Windows guest.
     * run the scream receiver on host.
+    * [more info][archwiki scream]
+* Audio using 5.1 [usb-audio][archwiki usb-audio]
 * You can use the [MSI utility v2][git msi] to ensure [MSI][msi] for virtualized devices are working, checking if IRQs are negative.
 * On this example, the VM have 2 disks, one as LVM's LV and another as raw image for demonstrative purposes. Usage of LVM allow us to snapshot, even with *raw* format, and is prefered.
 
@@ -65,16 +67,16 @@ You may need a similar setup if xorg can't autodetect the GPUs and displays in b
 > virsh nodedev-detach pci_0000_08_00_1
   4. Create the needed xorg configuration for your secondary GPU only.
   5. Now create scripts that recreate both states.  
-You can check both ***nvidia_to_guest*** and ***nvidia_to_host*** scripts, notice the usage of symbolic link, given this simplifies this setup.
+You can check both ***nvidia_to_guest*** and ***nvidia_to_host*** scripts, notice the usage of symbolic link, given this simplifies ***a lot*** this setup.
   6. Run the scripts when you want to passthrough the GPU or return to host  
-There are many ways to run both scripts, I prefer manual execution, like
-    * Go to another tty _(ex: Ctrl + Alt + F2)_ and run from there.
-    * Using GNU Screen / Termux
-    * The script need survive the display-manager restart
+There are many ways to run both scripts, I prefer manual execution, like:  
+    * 1) Using GNU Screen / tmux  
+    * 2) Go to another tty _(ex: Ctrl + Alt + F2)_ and run from there.  
+    * The script need to survive the display-manager restart
 
 ## Workflow - Common usage
 
-0. Note: I prefer to run both scripts in another tty.
+0. Note: I run both scripts inside a tmux session.
 1. We run nvidia_to_guest.sh as root or sudo.
     * this will kill every process depending on xorg.
 2. Display manager should restart, we login again.
@@ -89,19 +91,17 @@ There are many ways to run both scripts, I prefer manual execution, like
 
 ## Troubleshooting
 
-#### If the system crash while running the VM and force to reboot.
-This problem only happens if you need to change xorg configuration files between "no pci passthrough" and "pci passthrough" state. You will need to manually _fix_ the xorg configuration files under **/etc/X11/xorg.conf.d/**. Why? on first boot after the crash, nvidia modules will load, but xorg will not use the Nvidia GPU because there is no '.conf' file that wants it.
-
-Just recreate the "no pci passthrough" state and execute 'systemctl restart display-manager'. In my case this imply recreate the symbolic link to 10-nvidia.conf.
->ln -sf /etc/X11/xorg.conf.avail/10-nvidia.conf /etc/X11/xorg.conf.d/10-nvidia.conf
-
+#### If the system crash while running the VM and we are forced to reboot.
+When you need to change xorg configuration files between "no pci passthrough" and "pci passthrough" state, in the first boot after the crash, nvidia modules will load, but xorg will not use the Nvidia GPU because there is no '.conf' file that wants it. To fix, simple run the `nvidia_to_host.sh` script.
 
 [git barrier]: https://github.com/debauchee/barrier/
 [git scream]: https://github.com/duncanthrax/scream/
 [git msi]: https://github.com/CHEF-KOCH/MSI-utility/
 [msi]: https://vfio.blogspot.com/2014/09/vfio-interrupts-and-how-to-coax-windows.html
 [git scream ivshmem]: https://github.com/duncanthrax/scream/#using-ivshmem-between-windows-guest-and-linux-host
-[archwiki]: https://wiki.archlinux.org/index.php/PCI_passthrough_via_OVMF
-[archwiki static huge pages]: (https://wiki.archlinux.org/index.php/PCI_passthrough_via_OVMF#Static_huge_pages)
-[archwiki error43]: https://wiki.archlinux.org/index.php/PCI_passthrough_via_OVMF#%22Error_43:_Driver_failed_to_load%22_on_Nvidia_GPUs_passed_to_Windows_VMs
-[archwiki evdev]: https://wiki.archlinux.org/index.php/PCI_passthrough_via_OVMF#Passing_keyboard/mouse_via_Evdev
+[archwiki]: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF
+[archwiki static huge pages]: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF#Static_huge_pages
+[archwiki error43]: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF#Video_card_driver_virtualisation_detection
+[archwiki evdev]: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF#Passing_keyboard/mouse_via_Evdev
+[archwiki scream]: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF#Passing_VM_audio_to_host_via_Scream
+[archwiki usb-audio]: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF#Passing_VM_audio_to_host_via_PulseAudio
