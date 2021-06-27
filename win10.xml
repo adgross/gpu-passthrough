@@ -1,6 +1,6 @@
 <domain xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0" type="kvm">
-  <name>win10</name>
-  <uuid>f7190f16-d51f-4ae8-8b3f-77b35f97ca21</uuid>
+  <name>win10-20H2-vfio</name>
+  <uuid>0de58b6c-4efd-4e53-ab20-df89b4352cfd</uuid>
   <metadata>
     <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
       <libosinfo:os id="http://microsoft.com/win/10"/>
@@ -15,20 +15,20 @@
   </memoryBacking>
   <vcpu placement="static">8</vcpu>
   <cputune>
-    <vcpupin vcpu="0" cpuset="2"/>
-    <vcpupin vcpu="1" cpuset="3"/>
-    <vcpupin vcpu="2" cpuset="4"/>
-    <vcpupin vcpu="3" cpuset="5"/>
-    <vcpupin vcpu="4" cpuset="6"/>
-    <vcpupin vcpu="5" cpuset="7"/>
-    <vcpupin vcpu="6" cpuset="0"/>
-    <vcpupin vcpu="7" cpuset="1"/>
+    <vcpupin vcpu="0" cpuset="0"/>
+    <vcpupin vcpu="1" cpuset="1"/>
+    <vcpupin vcpu="2" cpuset="2"/>
+    <vcpupin vcpu="3" cpuset="3"/>
+    <vcpupin vcpu="4" cpuset="4"/>
+    <vcpupin vcpu="5" cpuset="5"/>
+    <vcpupin vcpu="6" cpuset="6"/>
+    <vcpupin vcpu="7" cpuset="7"/>
   </cputune>
   <os>
-    <type arch="x86_64" machine="pc-i440fx-4.0">hvm</type>
+    <type arch="x86_64" machine="pc-q35-5.0">hvm</type>
     <loader readonly="yes" type="pflash">/usr/share/edk2-ovmf/x64/OVMF_CODE.fd</loader>
-    <nvram>/var/lib/libvirt/qemu/nvram/win10_VARS.fd</nvram>
-    <bootmenu enable="yes"/>
+    <nvram>/var/lib/libvirt/qemu/nvram/win10-20H2-vfio_VARS.fd</nvram>
+    <boot dev="hd"/>
   </os>
   <features>
     <acpi/>
@@ -44,9 +44,11 @@
     </kvm>
     <vmport state="off"/>
   </features>
-  <cpu mode="host-passthrough" check="partial">
-    <topology sockets="1" dies="1" cores="8" threads="1"/>
+  <cpu mode="host-passthrough" check="none" migratable="on">
+    <topology sockets="1" dies="1" cores="4" threads="2"/>
+    <cache mode="passthrough"/>
     <feature policy="disable" name="hypervisor"/>
+    <feature policy="require" name="topoext"/>
   </cpu>
   <clock offset="localtime">
     <timer name="rtc" tickpolicy="catchup"/>
@@ -65,55 +67,103 @@
     <emulator>/usr/bin/qemu-system-x86_64</emulator>
     <disk type="file" device="cdrom">
       <driver name="qemu" type="raw"/>
-      <target dev="sdb" bus="sata"/>
+      <target dev="sdc" bus="sata"/>
       <readonly/>
       <address type="drive" controller="0" bus="0" target="0" unit="1"/>
     </disk>
     <disk type="file" device="cdrom">
       <driver name="qemu" type="raw"/>
-      <target dev="sdc" bus="sata"/>
+      <target dev="sdd" bus="sata"/>
       <readonly/>
       <address type="drive" controller="0" bus="0" target="0" unit="2"/>
     </disk>
-    <disk type="file" device="disk">
-      <driver name="qemu" type="raw"/>
-      <source file="/mnt/VM/win10-2.img"/>
-      <target dev="sdd" bus="scsi"/>
-      <boot order="1"/>
-      <address type="drive" controller="0" bus="0" target="0" unit="3"/>
+    <disk type="block" device="disk">
+      <driver name="qemu" type="raw" cache="none" io="native" discard="unmap"/>
+      <source dev="/dev/main/Win10_20H2"/>
+      <target dev="sda" bus="scsi"/>
+      <address type="drive" controller="0" bus="0" target="0" unit="0"/>
     </disk>
     <disk type="block" device="disk">
-      <driver name="qemu" type="raw" cache="none" io="native"/>
-      <source dev="/dev/slow/Win10_secondary"/>
-      <target dev="sdf" bus="scsi"/>
-      <address type="drive" controller="0" bus="0" target="0" unit="5"/>
+      <driver name="qemu" type="raw" cache="none" io="native" discard="unmap"/>
+      <source dev="/dev/main/Win10_secondary"/>
+      <target dev="sdb" bus="scsi"/>
+      <address type="drive" controller="0" bus="0" target="0" unit="1"/>
     </disk>
     <controller type="usb" index="0" model="qemu-xhci" ports="15">
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x05" function="0x0"/>
-    </controller>
-    <controller type="pci" index="0" model="pci-root"/>
-    <controller type="scsi" index="0" model="virtio-scsi">
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x06" function="0x0"/>
+      <address type="pci" domain="0x0000" bus="0x04" slot="0x00" function="0x0"/>
     </controller>
     <controller type="sata" index="0">
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x07" function="0x0"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x1f" function="0x2"/>
+    </controller>
+    <controller type="pci" index="0" model="pcie-root"/>
+    <controller type="pci" index="1" model="pcie-root-port">
+      <model name="pcie-root-port"/>
+      <target chassis="1" port="0x10"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x02" function="0x0" multifunction="on"/>
+    </controller>
+    <controller type="pci" index="2" model="pcie-root-port">
+      <model name="pcie-root-port"/>
+      <target chassis="2" port="0x11"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x02" function="0x1"/>
+    </controller>
+    <controller type="pci" index="3" model="pcie-to-pci-bridge">
+      <model name="pcie-pci-bridge"/>
+      <address type="pci" domain="0x0000" bus="0x01" slot="0x00" function="0x0"/>
+    </controller>
+    <controller type="pci" index="4" model="pcie-root-port">
+      <model name="pcie-root-port"/>
+      <target chassis="4" port="0x12"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x02" function="0x2"/>
+    </controller>
+    <controller type="pci" index="5" model="pcie-root-port">
+      <model name="pcie-root-port"/>
+      <target chassis="5" port="0x13"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x02" function="0x3"/>
+    </controller>
+    <controller type="pci" index="6" model="pcie-root-port">
+      <model name="pcie-root-port"/>
+      <target chassis="6" port="0x14"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x02" function="0x4"/>
+    </controller>
+    <controller type="pci" index="7" model="pcie-root-port">
+      <model name="pcie-root-port"/>
+      <target chassis="7" port="0x15"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x02" function="0x5"/>
+    </controller>
+    <controller type="pci" index="8" model="pcie-root-port">
+      <model name="pcie-root-port"/>
+      <target chassis="8" port="0x8"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x01" function="0x0" multifunction="on"/>
+    </controller>
+    <controller type="pci" index="9" model="pcie-root-port">
+      <model name="pcie-root-port"/>
+      <target chassis="9" port="0x9"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x01" function="0x1"/>
+    </controller>
+    <controller type="pci" index="10" model="pcie-root-port">
+      <model name="pcie-root-port"/>
+      <target chassis="10" port="0xa"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x01" function="0x2"/>
+    </controller>
+    <controller type="scsi" index="0" model="virtio-scsi">
+      <address type="pci" domain="0x0000" bus="0x07" slot="0x00" function="0x0"/>
     </controller>
     <controller type="virtio-serial" index="0">
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x08" function="0x0"/>
+      <address type="pci" domain="0x0000" bus="0x05" slot="0x00" function="0x0"/>
     </controller>
-    <interface type="direct">
-      <mac address="52:54:00:2e:f8:24"/>
-      <source dev="enp3s0" mode="bridge"/>
+    <interface type="network">
+      <mac address="52:54:00:c8:14:b1"/>
+      <source network="networkIsolated"/>
       <model type="virtio"/>
       <link state="down"/>
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x02" function="0x0"/>
+      <address type="pci" domain="0x0000" bus="0x02" slot="0x00" function="0x0"/>
     </interface>
     <interface type="network">
-      <mac address="52:54:00:8e:b4:28"/>
+      <mac address="52:54:00:b5:1d:72"/>
       <source network="default"/>
       <model type="virtio"/>
       <link state="up"/>
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x03" function="0x0"/>
+      <address type="pci" domain="0x0000" bus="0x0a" slot="0x00" function="0x0"/>
     </interface>
     <serial type="pty">
       <target type="isa-serial" port="0">
@@ -123,6 +173,9 @@
     <console type="pty">
       <target type="serial" port="0"/>
     </console>
+    <input type="tablet" bus="usb">
+      <address type="usb" bus="0" port="1"/>
+    </input>
     <input type="mouse" bus="virtio">
       <address type="pci" domain="0x0000" bus="0x00" slot="0x0e" function="0x0"/>
     </input>
@@ -131,26 +184,27 @@
     </input>
     <input type="mouse" bus="ps2"/>
     <input type="keyboard" bus="ps2"/>
-    <sound model="ac97">
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x04" function="0x0"/>
-    </sound>
+    <audio id="1" type="none"/>
     <hostdev mode="subsystem" type="pci" managed="yes">
       <source>
         <address domain="0x0000" bus="0x08" slot="0x00" function="0x0"/>
       </source>
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x0b" function="0x0"/>
+      <address type="pci" domain="0x0000" bus="0x08" slot="0x00" function="0x0"/>
     </hostdev>
     <hostdev mode="subsystem" type="pci" managed="yes">
       <source>
         <address domain="0x0000" bus="0x08" slot="0x00" function="0x1"/>
       </source>
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x0c" function="0x0"/>
+      <address type="pci" domain="0x0000" bus="0x09" slot="0x00" function="0x0"/>
     </hostdev>
     <redirdev bus="usb" type="spicevmc">
       <address type="usb" bus="0" port="2"/>
     </redirdev>
+    <redirdev bus="usb" type="spicevmc">
+      <address type="usb" bus="0" port="3"/>
+    </redirdev>
     <memballoon model="virtio">
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x09" function="0x0"/>
+      <address type="pci" domain="0x0000" bus="0x06" slot="0x00" function="0x0"/>
     </memballoon>
     <shmem name="scream-ivshmem">
       <model type="ivshmem-plain"/>
@@ -159,12 +213,13 @@
     </shmem>
   </devices>
   <qemu:commandline>
+    <qemu:arg value="-device"/>
+    <qemu:arg value="usb-audio,audiodev=usb,multi=on"/>
     <qemu:arg value="-audiodev"/>
-    <qemu:arg value="pa,id=pa1,server=/run/user/1000/pulse/native"/>
+    <qemu:arg value="pa,id=usb,server=/run/user/1000/pulse/native"/>
     <qemu:arg value="-object"/>
     <qemu:arg value="input-linux,id=mouse1,evdev=/dev/input/by-id/usb-Logitech_Gaming_Mouse_G502_128D366D3237-event-mouse"/>
     <qemu:arg value="-object"/>
-    <qemu:arg value="input-linux,id=kbd1,evdev=/dev/input/by-id/ckb-Corsair_Gaming_K70_RGB_RAPIDFIRE_Keyboard_vKB_-event,grab_all=on,repeat=on"/>
+    <qemu:arg value="input-linux,id=kbd1,evdev=/dev/input/by-id/usb-Corsair_Corsair_Gaming_K70_RGB_RAPIDFIRE_Keyboard_06030007AECE00A45768E042F5001940-if01-event-kbd,grab_all=on,repeat=on"/>
   </qemu:commandline>
 </domain>
-
