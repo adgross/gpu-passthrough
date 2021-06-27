@@ -1,8 +1,8 @@
 #!/bin/bash
 
 if [ "$(id -u)" -ne 0 ]; then
-        echo "run this script as root"
-        exit 1
+    echo "run this script as root"
+    exit 1
 fi
 
 # Stop display manager
