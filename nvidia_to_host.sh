@@ -17,10 +17,8 @@ modprobe -r vfio
 ln -sf /etc/X11/xorg.conf.avail/10-nvidia.conf /etc/X11/xorg.conf.d/10-nvidia.conf
 
 # Re-Bind GPU to Nvidia Driver
-virsh nodedev-reattach pci_0000_08_00_1
 virsh nodedev-reattach pci_0000_08_00_0
-
-sleep 1
+virsh nodedev-reattach pci_0000_08_00_1
 
 # Start Display Manager
 systemctl start display-manager.service
